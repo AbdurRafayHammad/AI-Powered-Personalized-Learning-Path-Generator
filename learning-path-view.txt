@@ -1,0 +1,204 @@
+// LearningPathView.jsx
+import React, { useState } from 'react';
+import { User, Book, Target, Clock, CheckCircle, Play, ExternalLink, Star, TrendingUp } from 'lucide-react';
+import { DatabaseService } from './DatabaseService';
+
+const LearningPathView = ({ userId, userProfile, learningPath, onResourceComplete }) => {
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  const getResourceIcon = (type) => {
+    switch(type) {
+      case 'video': return <Play className="w-5 h-5" />;
+      case 'course': return <Book className="w-5 h-5" />;
+      case 'article': return <ExternalLink className="w-5 h-5" />;
+      case 'project': return <Target className="w-5 h-5" />;
+      default: return <Book className="w-5 h-5" />;
+    }
+  };
+
+  const getDifficultyColor = (difficulty) => {
+    switch(difficulty) {
+      case 'beginner': return 'bg-green-100 text-green-800';
+      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
+      case 'advanced': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const completedResources = learningPath.resources.filter(resource => 
+    DatabaseService.getProgress(userId, resource.id)
+  ).length;
+
+  const progressPercentage = (completedResources / learningPath.resources.length) * 100;
+
+  const calculateStudiedHours = () => {
+    return learningPath.resources.reduce((total, resource) => {
+      if (DatabaseService.getProgress(userId, resource.id)) {
+        return total + parseInt(resource.duration);
+      }
+      return total;
+    }, 0);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-8 mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{learningPath.title}</h1>
+            <p className="text-blue-100 mb-4">{learningPath.description}</p>
+            <div className="flex items-center space-x-6 text-sm">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span>{learningPath.estimatedDuration}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Target className="w-4 h-4" />
+                <span>{learningPath.resources.length} Resources</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="w-4 h-4" />
+                <span>{Math.round(progressPercentage)}% Complete</span>
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="bg-white/20 rounded-lg p-4">
+              <div className="text-2xl font-bold">{completedResources}/{learningPath.resources.length}</div>
+              <div className="text-sm text-blue-100">Completed</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="mt-6">
+          <div className="bg-white/20 rounded-full h-3">
+            <div 
+              className="bg-white rounded-full h-3 transition-all duration-500"
+              style={{ width: `${progressPercentage}%` }}
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white rounded-lg shadow-sm mb-8">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6">
+            {[
+              { id: 'overview', label: 'Overview', icon: <Book className="w-4 h-4" /> },
+              { id: 'resources', label: 'Resources', icon: <Target className="w-4 h-4" /> },
+              { id: 'progress', label: 'Progress', icon: <TrendingUp className="w-4 h-4" /> }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Learning Path Overview</h3>
+              <p className="text-gray-600 mb-4">
+                This personalized learning path was generated based on your interests in {userProfile.interests.join(', ')} 
+                and your {userProfile.experience} experience level.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold mb-3 flex items-center">
+                  <User className="w-5 h-5 mr-2 text-blue-600" />
+                  Your Profile
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Name:</strong> {userProfile.name}</div>
+                  <div><strong>Experience:</strong> {userProfile.experience}</div>
+                  <div><strong>Learning Style:</strong> {userProfile.learningStyle}</div>
+                  <div><strong>Time Commitment:</strong> {userProfile.timeCommitment} hours/week</div>
+                  <div><strong>Current Skills:</strong> {userProfile.currentSkills.length > 0 ? userProfile.currentSkills.join(', ') : 'None specified'}</div>
+                </div>
+              </div>
+              
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold mb-3 flex items-center">
+                  <Target className="w-5 h-5 mr-2 text-green-600" />
+                  Learning Goals
+                </h4>
+                <p className="text-sm text-gray-600">{userProfile.goals}</p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-6">
+              <h4 className="font-semibold mb-3 text-blue-900">Recommended Learning Strategy</h4>
+              <div className="text-sm text-blue-800 space-y-2">
+                <p>Based on your {userProfile.learningStyle} learning style, we recommend:</p>
+                <ul className="list-disc list-inside space-y-1 ml-4">
+                  {userProfile.learningStyle === 'visual' && (
+                    <>
+                      <li>Focus on video tutorials and interactive diagrams</li>
+                      <li>Use mind maps and visual aids to organize concepts</li>
+                      <li>Take screenshots and create visual notes</li>
+                    </>
+                  )}
+                  {userProfile.learningStyle === 'auditory' && (
+                    <>
+                      <li>Listen to podcasts and recorded lectures</li>
+                      <li>Explain concepts out loud to reinforce learning</li>
+                      <li>Join study groups or online discussions</li>
+                    </>
+                  )}
+                  {userProfile.learningStyle === 'kinesthetic' && (
+                    <>
+                      <li>Build hands-on projects alongside tutorials</li>
+                      <li>Practice coding exercises regularly</li>
+                      <li>Experiment with different implementations</li>
+                    </>
+                  )}
+                  {userProfile.learningStyle === 'reading' && (
+                    <>
+                      <li>Read documentation and written tutorials thoroughly</li>
+                      <li>Take detailed notes and create summaries</li>
+                      <li>Write blog posts or documentation about what you learn</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'resources' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Learning Resources</h3>
+              <div className="text-sm text-gray-500">
+                {completedResources} of {learningPath.resources.length} completed
+              </div>
+            </div>
+            
+            {learningPath.resources.map((resource, index) => {
+              const isCompleted = DatabaseService.getProgress(userId, resource.id);
+              return (
+                <div key={resource.id} className={`border rounded-lg p-6 transition-colors ${
+                  isCompleted ? 'bg-green-50 border-green-200' : 'border-gray-200 hover:border-gray-300'
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <span className="bg-gray-100 text-gray-600 px

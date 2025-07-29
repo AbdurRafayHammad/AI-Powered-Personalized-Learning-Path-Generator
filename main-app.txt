@@ -1,0 +1,116 @@
+// App.jsx
+import React, { useState } from 'react';
+import { Brain } from 'lucide-react';
+import OnboardingForm from './OnboardingForm';
+import LearningPathView from './LearningPathView';
+import { AIRecommendationService } from './AIRecommendationService';
+import { DatabaseService } from './DatabaseService';
+
+const App = () => {
+  const [currentView, setCurrentView] = useState('onboarding');
+  const [userId, setUserId] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [learningPath, setLearningPath] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleOnboardingComplete = async (newUserId, profile) => {
+    setLoading(true);
+    setUserId(newUserId);
+    setUserProfile(profile);
+    
+    // Simulate AI processing delay
+    setTimeout(() => {
+      const generatedPath = AIRecommendationService.generateLearningPath(profile);
+      DatabaseService.saveLearningPath(newUserId, generatedPath);
+      setLearningPath(generatedPath);
+      setCurrentView('learningPath');
+      setLoading(false);
+    }, 2000);
+  };
+
+  const handleResourceComplete = (resourceId, completed) => {
+    DatabaseService.updateProgress(userId, resourceId, completed);
+    // Force re-render by updating state
+    setLearningPath(prev => ({ ...prev }));
+  };
+
+  const handleStartOver = () => {
+    if (userId) {
+      DatabaseService.clearUserData(userId);
+    }
+    setCurrentView('onboarding');
+    setUserId(null);
+    setUserProfile(null);
+    setLearningPath(null);
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Generating Your Learning Path</h2>
+          <p className="text-gray-600">Our AI is analyzing your profile and curating the best resources...</p>
+          <div className="mt-4 text-sm text-gray-500">
+            <p>✨ Matching your interests with quality content</p>
+            <p>🎯 Personalizing difficulty levels</p>
+            <p>📚 Organizing optimal learning sequence</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <Brain className="w-8 h-8 text-blue-600" />
+              <h1 className="text-xl font-bold text-gray-900">Learning Path Generator</h1>
+            </div>
+            {currentView === 'learningPath' && (
+              <button
+                onClick={handleStartOver}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Start Over
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {currentView === 'onboarding' && (
+          <OnboardingForm onComplete={handleOnboardingComplete} />
+        )}
+        
+        {currentView === 'learningPath' && learningPath && (
+          <LearningPathView 
+            userId={userId}
+            userProfile={userProfile}
+            learningPath={learningPath}
+            onResourceComplete={handleResourceComplete}
+          />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-gray-600">
+            <p className="mb-2">Personalized Learning Path Generator</p>
+            <p className="text-sm">Built with React, TailwindCSS, and AI-powered recommendations</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
